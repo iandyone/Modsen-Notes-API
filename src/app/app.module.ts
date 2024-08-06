@@ -1,10 +1,11 @@
 import { Module } from '@nestjs/common';
+import { NotesModule } from '../notes/notes.module';
 import { AppController } from './app.controller';
 import { AppService } from './app.service';
-import { NotesModule } from 'src/notes/notes.module';
+import { ConfigModule } from '@nestjs/config';
 
 @Module({
-  imports: [NotesModule],
+  imports: [NotesModule, ConfigModule.forRoot()],
   controllers: [AppController],
   providers: [AppService],
 })

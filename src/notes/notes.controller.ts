@@ -6,6 +6,7 @@ import {
   ParseIntPipe,
   Patch,
   Post,
+  Query,
   UsePipes,
   ValidationPipe,
 } from '@nestjs/common';
@@ -17,8 +18,8 @@ export class NotesController {
   constructor(private readonly notesService: NotesService) {}
 
   @Get()
-  getAllNotes() {
-    return this.notesService.getAllNotes();
+  getAllNotes(@Query('tag') tag: string) {
+    return this.notesService.getAllNotes(tag);
   }
 
   @Post()
@@ -35,5 +36,10 @@ export class NotesController {
   @Patch()
   updateNote(@Body('note') note: UpdateNoteDto) {
     return this.notesService.updateNote(note);
+  }
+
+  @Get('tags')
+  getTags() {
+    return this.notesService.getTags();
   }
 }
