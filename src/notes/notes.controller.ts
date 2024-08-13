@@ -37,9 +37,4 @@ export class NotesController {
   updateNote(@Body('note') note: UpdateNoteDto) {
     return this.notesService.updateNote(note);
   }
-
-  @Get('tags')
-  getTags() {
-    return this.notesService.getTags();
-  }
 }

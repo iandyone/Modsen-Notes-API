@@ -14,10 +14,10 @@ export class NoteDto {
   tags: string[];
 
   @IsInt()
-  timestamp: number;
+  lastUpdate: number;
 
   @IsInt()
-  order: number;
+  position: number;
 
   @IsString()
   color: string;

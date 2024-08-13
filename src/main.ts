@@ -6,7 +6,7 @@ async function bootstrap() {
 
   app.enableCors({
     origin: process.env.ORIGINS.split(',') ?? [],
-    methods: 'GET,HEAD,PUT,PATCH,POST,DELETE,OPTIONS',
+    methods: 'GET,HEAD,PATCH,POST,DELETE,OPTIONS',
     credentials: true,
     allowedHeaders: 'Content-Type, Accept, Authorization',
   });

@@ -1,88 +1,114 @@
 import { Injectable } from '@nestjs/common';
 import { NoteDto } from './dto/notes.dto';
 import { UpdateNoteDto } from './dto/update.dto';
-
-interface TagMap {
-  [key: string]: Set<number>;
-}
+import { Pool } from 'pg';
 
 @Injectable()
 export class NotesService {
-  private notes: NoteDto[] = [];
-  private tagsMap: TagMap = {};
-
-  getAllNotes(tag?: string): NoteDto[] {
-    if (tag) {
-      const notesWithTag = this.tagsMap[`#${tag}`];
-
-      if (!notesWithTag) {
-        return [];
-      }
-
-      const notesIds = Array.from(this.tagsMap[`#${tag}`]);
-
-      if (notesIds) {
-        return this.notes.filter(({ id }) => notesIds.includes(id));
-      }
-    }
-
-    return this.notes;
-  }
-
-  createNote(color: string) {
-    const note: NoteDto = {
-      id: this.notes.length ? this.notes.at(-1).id + 1 : 1,
-      title: 'Новая заметка',
-      description: '',
-      color,
-      tags: [],
-      order: this.notes.length ? this.notes.at(-1).order + 1 : 1,
-      timestamp: Date.now(),
-    };
-
-    this.notes.push(note);
-    return note;
-  }
-
-  removeNote(id: number) {
-    this.notes = this.notes.filter((note) => note.id !== id);
-    return id;
-  }
-
-  updateNote(note: UpdateNoteDto) {
-    const existingNote = this.notes.find(
-      (currentNote) => currentNote.id === note.id,
-    );
-
-    if (!existingNote) {
-      return null;
-    }
-
-    existingNote.tags.forEach((tag) => {
-      this.tagsMap[tag]?.delete(note.id);
-      if (this.tagsMap[tag].size === 0) {
-        delete this.tagsMap[tag];
-      }
+  private pool: Pool;
+  constructor() {
+    this.pool = new Pool({
+      connectionString: process.env.POSTGRES_URL,
     });
 
-    this.notes = this.notes.map((currentNote) =>
-      currentNote.id === note.id ? { ...currentNote, ...note } : currentNote,
-    );
+    this.pool.connect((err) => {
+      if (err) throw new Error();
 
-    if (note.tags?.length) {
-      note.tags.forEach((tag) => {
-        if (!this.tagsMap[tag]) {
-          this.tagsMap[tag] = new Set([note.id]);
-        } else {
-          this.tagsMap[tag].add(note.id);
-        }
-      });
-    }
-
-    return note;
+      console.log('Connect to database successfully!');
+    });
   }
 
-  getTags() {
-    return Array.from(this.tagsMap['#1']);
+  async getAllNotes(tag?: string): Promise<NoteDto[]> {
+    try {
+      const notes = await this.pool.query<NoteDto>(
+        `SELECT 
+            n.id, 
+            n.title, 
+            n.description, 
+            TO_CHAR(n.lastUpdate, 'DD.MM.YYYY') AS lastUpdate, 
+            n.position, 
+            n.color, 
+            COALESCE(array_agg(t.tag) FILTER (WHERE t.tag IS NOT NULL), '{}') AS tags
+         FROM notes n 
+         LEFT OUTER JOIN tags t ON n.id=t.note_id 
+         ${tag ? 'WHERE n.id IN (SELECT note_id FROM tags WHERE tag=$1)' : ''}
+         GROUP BY n.id 
+         ORDER BY n.position`,
+        tag ? ['#' + tag] : [],
+      );
+
+      return notes.rows;
+    } catch (error) {
+      console.log(error);
+      return [];
+    }
+  }
+
+  async createNote(color: string) {
+    try {
+      return await this.pool.query(
+        `INSERT INTO notes (
+            title, 
+            description, 
+            color, 
+            lastUpdate, 
+            position
+          ) 
+          VALUES (
+            'Новая заметка', 
+            $1, 
+            $2, 
+            NOW(), 
+            COALESCE((SELECT MAX(position) + 1 FROM notes), 1)
+          ) 
+          RETURNING *`,
+        ['', color],
+      );
+    } catch (error) {
+      console.log(error);
+    }
+  }
+
+  async removeNote(id: number) {
+    try {
+      await this.pool.query('DELETE FROM tags WHERE note_id=$1', [id]);
+      const note = await this.pool.query(
+        'DELETE FROM notes WHERE id=$1 RETURNING *',
+        [id],
+      );
+      return note.rows;
+    } catch (error) {
+      console.log(error);
+    }
+  }
+
+  async updateNote(note: UpdateNoteDto) {
+    try {
+      for (const key of Object.keys(note)) {
+        if (key !== 'id' && key !== 'tags' && key !== 'lastUpdate') {
+          if (note[key]) {
+            const query = `UPDATE notes SET ${key} = $1 WHERE id = $2`;
+            await this.pool.query(query, [note[key], note.id]);
+          }
+        }
+      }
+
+      await this.pool.query('DELETE FROM tags WHERE note_id = $1', [note.id]);
+
+      if (note.tags && note.tags.length > 0) {
+        for (const tag of note.tags) {
+          await this.pool.query(
+            'INSERT INTO tags (tag, note_id) VALUES ($1, $2)',
+            [tag, note.id],
+          );
+        }
+      }
+
+      return (
+        await this.pool.query('SELECT * FROM notes WHERE id = $1', [note.id])
+      ).rows;
+    } catch (error) {
+      console.log(error);
+    }
   }
 }
