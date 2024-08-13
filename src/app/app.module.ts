@@ -5,7 +5,7 @@ import { AppService } from './app.service';
 import { ConfigModule } from '@nestjs/config';
 
 @Module({
-  imports: [NotesModule, ConfigModule.forRoot()],
+  imports: [NotesModule, ConfigModule.forRoot({ isGlobal: true })],
   controllers: [AppController],
   providers: [AppService],
 })
