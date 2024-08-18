@@ -1,7 +1,8 @@
 import { Injectable } from '@nestjs/common';
-import { NoteDto } from './dto/notes.dto';
-import { UpdateNoteDto } from './dto/update.dto';
+import { UpdateNoteDto } from './dto/note-update';
 import { Pool } from 'pg';
+import { NoteDto } from './dto/note.dto';
+import { NotesPositionsDto } from './dto/notes-positions';
 
 @Injectable()
 export class NotesService {
@@ -107,6 +108,19 @@ export class NotesService {
       return (
         await this.pool.query('SELECT * FROM notes WHERE id = $1', [note.id])
       ).rows;
+    } catch (error) {
+      console.log(error);
+    }
+  }
+
+  async updateNotesPositions(notes: NotesPositionsDto[]) {
+    try {
+      notes.map(({ id, position }) => {
+        this.pool.query('UPDATE notes SET position=$1 WHERE id=$2', [
+          position,
+          id,
+        ]);
+      });
     } catch (error) {
       console.log(error);
     }

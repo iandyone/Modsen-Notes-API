@@ -6,12 +6,14 @@ import {
   ParseIntPipe,
   Patch,
   Post,
+  Put,
   Query,
   UsePipes,
   ValidationPipe,
 } from '@nestjs/common';
 import { NotesService } from './notes.service';
-import { UpdateNoteDto } from './dto/update.dto';
+import { UpdateNoteDto } from './dto/note-update';
+import { NotesPositionsDto } from './dto/notes-positions';
 
 @Controller('notes')
 export class NotesController {
@@ -36,5 +38,14 @@ export class NotesController {
   @Patch()
   updateNote(@Body('note') note: UpdateNoteDto) {
     return this.notesService.updateNote(note);
+  }
+
+  @Put()
+  updateNotesPositions(@Body('notes') notes: NotesPositionsDto[]) {
+    try {
+      return this.notesService.updateNotesPositions(notes);
+    } catch (error) {
+      console.log(error);
+    }
   }
 }

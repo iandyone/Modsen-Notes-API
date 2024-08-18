@@ -20,7 +20,7 @@ export class NoteDto {
 
   @IsInt()
   @Min(1)
-  order: number;
+  position: number;
 
   @IsString()
   color: string;
