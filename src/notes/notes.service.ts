@@ -7,13 +7,16 @@ import { NotesPositionsDto } from './dto/notes-positions';
 @Injectable()
 export class NotesService {
   private pool: Pool;
+
   constructor() {
     this.pool = new Pool({
       connectionString: process.env.POSTGRES_URL,
     });
 
     this.pool.connect((err) => {
-      if (err) throw new Error();
+      if (err) {
+        console.log('Error during connection to database');
+      }
 
       console.log('Connect to database successfully!');
     });
@@ -41,13 +44,12 @@ export class NotesService {
       return notes.rows;
     } catch (error) {
       console.log(error);
-      return [];
     }
   }
 
   async createNote(color: string) {
     try {
-      return await this.pool.query(
+      const note = await this.pool.query(
         `INSERT INTO notes (
             title, 
             description, 
@@ -65,6 +67,8 @@ export class NotesService {
           RETURNING *`,
         ['', color],
       );
+
+      return note.rows;
     } catch (error) {
       console.log(error);
     }
@@ -114,15 +118,21 @@ export class NotesService {
   }
 
   async updateNotesPositions(notes: NotesPositionsDto[]) {
+    const client = await this.pool.connect();
     try {
-      notes.map(({ id, position }) => {
-        this.pool.query('UPDATE notes SET position=$1 WHERE id=$2', [
+      await client.query('BEGIN');
+      for (const { id, position } of notes) {
+        await client.query('UPDATE notes SET position=$1 WHERE id=$2', [
           position,
           id,
         ]);
-      });
+      }
+      await client.query('COMMIT');
     } catch (error) {
+      await client.query('ROLLBACK');
       console.log(error);
+    } finally {
+      client.release();
     }
   }
 }
