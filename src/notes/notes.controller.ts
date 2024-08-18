@@ -9,43 +9,78 @@ import {
   Put,
   Query,
   UsePipes,
-  ValidationPipe,
+  InternalServerErrorException,
 } from '@nestjs/common';
 import { NotesService } from './notes.service';
 import { UpdateNoteDto } from './dto/note-update';
 import { NotesPositionsDto } from './dto/notes-positions';
+import { JoiValidationPipe } from './pipes/joi-validations-pipe';
+import { tagSchema } from './schemas/tag.schema';
+import { colorSchema } from './schemas/color.schema';
+import { idSchema } from './schemas/id.schema';
+import { noteSchema, updateNotesPositionsSchema } from './schemas/note.schema';
 
 @Controller('notes')
 export class NotesController {
   constructor(private readonly notesService: NotesService) {}
 
   @Get()
+  @UsePipes(new JoiValidationPipe(tagSchema))
   getAllNotes(@Query('tag') tag: string) {
-    return this.notesService.getAllNotes(tag);
+    try {
+      return this.notesService.getAllNotes(tag);
+    } catch (error) {
+      throw new InternalServerErrorException('Something went wrong', {
+        cause: error,
+      });
+    }
   }
 
   @Post()
+  @UsePipes(new JoiValidationPipe(colorSchema))
   createNote(@Body('color') color: string) {
-    return this.notesService.createNote(color);
+    try {
+      return this.notesService.createNote(color);
+    } catch (error) {
+      throw new InternalServerErrorException('Something went wrong', {
+        cause: error,
+      });
+    }
   }
 
   @Delete()
+  @UsePipes(new JoiValidationPipe(idSchema))
   removeNote(@Body('id', ParseIntPipe) id: number) {
-    return this.notesService.removeNote(id);
+    try {
+      return this.notesService.removeNote(id);
+    } catch (error) {
+      throw new InternalServerErrorException('Something went wrong', {
+        cause: error,
+      });
+    }
   }
 
-  @UsePipes(new ValidationPipe())
   @Patch()
+  @UsePipes(new JoiValidationPipe(noteSchema))
   updateNote(@Body('note') note: UpdateNoteDto) {
-    return this.notesService.updateNote(note);
+    try {
+      return this.notesService.updateNote(note);
+    } catch (error) {
+      throw new InternalServerErrorException('Something went wrong', {
+        cause: error,
+      });
+    }
   }
 
   @Put()
+  @UsePipes(new JoiValidationPipe(updateNotesPositionsSchema))
   updateNotesPositions(@Body('notes') notes: NotesPositionsDto[]) {
     try {
       return this.notesService.updateNotesPositions(notes);
     } catch (error) {
-      console.log(error);
+      throw new InternalServerErrorException('Something went wrong', {
+        cause: error,
+      });
     }
   }
 }
