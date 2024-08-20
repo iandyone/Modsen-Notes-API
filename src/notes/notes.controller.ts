@@ -15,10 +15,8 @@ import { NotesService } from './notes.service';
 import { UpdateNoteDto } from './dto/note-update';
 import { NotesPositionsDto } from './dto/notes-positions';
 import { JoiValidationPipe } from './pipes/joi-validations-pipe';
-import { tagSchema } from './schemas/tag.schema';
-import { colorSchema } from './schemas/color.schema';
-import { idSchema } from './schemas/id.schema';
 import { noteSchema, updateNotesPositionsSchema } from './schemas/note.schema';
+import { colorSchema, idSchema, tagSchema } from './schemas/fields.schema';
 
 @Controller('notes')
 export class NotesController {
