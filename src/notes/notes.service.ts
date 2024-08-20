@@ -9,18 +9,35 @@ export class NotesService {
   private pool: Pool;
 
   constructor() {
-    this.pool = new Pool({
-      connectionString: process.env.POSTGRES_URL,
-    });
+    this.connectToDatabase();
+  }
 
-    this.pool.connect((err) => {
-      if (err) {
-        console.log('Error during connection to database');
-        return;
-      }
+  private connectToDatabase() {
+    try {
+      this.pool = new Pool({
+        connectionString: process.env.POSTGRES_URL,
+      });
 
-      console.log('Connect to database successfully!');
-    });
+      this.pool.connect((err) => {
+        if (err) {
+          console.log('Error during connection to database', err);
+          return;
+        }
+
+        console.log('Connected to database successfully!');
+      });
+
+      this.pool.on('error', (err) => {
+        console.error('Unexpected error on idle client', err);
+        setTimeout(() => {
+          console.log('Attempting to reconnect to the database...');
+          this.connectToDatabase();
+        }, 3000);
+      });
+    } catch (error) {
+      console.log('Error during database connection:', error);
+      setTimeout(() => this.connectToDatabase(), 3000);
+    }
   }
 
   async getAllNotes(tag?: string): Promise<NoteDto[]> {
@@ -34,9 +51,8 @@ export class NotesService {
             n.position, 
             n.color, 
             COALESCE(array_agg(t.tag) FILTER (WHERE t.tag IS NOT NULL), '{}') AS tags
-         FROM notes n 
-         LEFT OUTER JOIN tags t ON n.id=t.note_id 
-         ${tag ? 'WHERE n.id IN (SELECT note_id FROM tags WHERE tag=$1)' : ''}
+         FROM notes n LEFT OUTER JOIN tags t ON n.id=t.note_id 
+         ${tag ? 'WHERE n.id IN (SELECT note_id FROM tags WHERE LOWER(tag)=LOWER($1))' : ''}
          GROUP BY n.id 
          ORDER BY n.position`,
         tag ? ['#' + tag] : [],
@@ -93,6 +109,7 @@ export class NotesService {
 
   async updateNote(note: UpdateNoteDto) {
     try {
+      await this.pool.query('BEGIN');
       for (const key of Object.keys(note)) {
         if (key !== 'id' && key !== 'tags' && key !== 'lastUpdate') {
           if (note[key]) {
@@ -102,21 +119,31 @@ export class NotesService {
         }
       }
 
-      await this.pool.query('DELETE FROM tags WHERE note_id = $1', [note.id]);
+      await this.pool.query(
+        `UPDATE notes SET lastUpdate = NOW() WHERE id = $1`,
+        [note.id],
+      );
 
-      if (note.tags && note.tags.length > 0) {
-        for (const tag of note.tags) {
-          await this.pool.query(
-            'INSERT INTO tags (tag, note_id) VALUES ($1, $2)',
-            [tag, note.id],
-          );
+      if (note.description) {
+        await this.pool.query('DELETE FROM tags WHERE note_id = $1', [note.id]);
+
+        if (note.tags && note.tags.length > 0) {
+          for (const tag of note.tags) {
+            await this.pool.query(
+              'INSERT INTO tags (tag, note_id) VALUES ($1, $2)',
+              [tag, note.id],
+            );
+          }
         }
       }
+
+      await this.pool.query('COMMIT');
 
       return (
         await this.pool.query('SELECT * FROM notes WHERE id = $1', [note.id])
       ).rows;
     } catch (error) {
+      await this.pool.query('ROLLBACK');
       console.log(error);
       throw new Error(error);
     }
@@ -136,6 +163,20 @@ export class NotesService {
       await this.pool.query('COMMIT');
     } catch (error) {
       await this.pool.query('ROLLBACK');
+      console.log(error);
+      throw new Error(error);
+    }
+  }
+
+  async getNotesTags(tag?: string) {
+    try {
+      const tags = await this.pool.query(
+        `SELECT DISTINCT tag FROM tags ${tag && 'WHERE LOWER(tag) LIKE LOWER($1)'}`,
+        tag ? ['#' + tag + '%'] : [],
+      );
+
+      return tags.rows.map((item) => item?.tag.slice(1));
+    } catch (error) {
       console.log(error);
       throw new Error(error);
     }

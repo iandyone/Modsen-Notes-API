@@ -81,4 +81,16 @@ export class NotesController {
       });
     }
   }
+
+  @Get('tags')
+  @UsePipes(new JoiValidationPipe(tagSchema))
+  getNotesTags(@Query('tag') tag: string) {
+    try {
+      return this.notesService.getNotesTags(tag);
+    } catch (error) {
+      throw new InternalServerErrorException('Something went wrong', {
+        cause: error,
+      });
+    }
+  }
 }
