@@ -1,23 +1,26 @@
 import * as Joi from 'joi';
-import { tagSchema } from './tag.schema';
-import { colorSchema } from './color.schema';
-import { idSchema } from './id.schema';
+import {
+  colorSchema,
+  idSchema,
+  positionSchema,
+  tagSchema,
+} from './fields.schema';
 
 export const noteSchema = Joi.object({
   id: idSchema,
-  title: Joi.string().min(1),
-  description: Joi.string().allow('').optional(),
-  tags: Joi.array().items(tagSchema).optional(),
-  timestamp: Joi.number().optional(),
-  position: Joi.number().min(1).optional(),
+  title: Joi.string().min(1).label('title'),
+  description: Joi.string().allow('').optional().label('description'),
+  tags: Joi.array().items(tagSchema).optional().label('tags list'),
+  timestamp: Joi.number().optional().label('last update date'),
+  position: positionSchema,
   color: colorSchema,
 });
 
 export const updateNotesPositionsSchema = Joi.array()
   .items(
     Joi.object({
-      id: Joi.number().required(),
-      position: Joi.number().min(0).required(),
+      id: idSchema.required(),
+      position: positionSchema.required(),
     }),
   )
   .required();

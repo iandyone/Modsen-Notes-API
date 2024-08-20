@@ -16,6 +16,7 @@ export class NotesService {
     this.pool.connect((err) => {
       if (err) {
         console.log('Error during connection to database');
+        return;
       }
 
       console.log('Connect to database successfully!');
@@ -44,6 +45,7 @@ export class NotesService {
       return notes.rows;
     } catch (error) {
       console.log(error);
+      throw new Error(error);
     }
   }
 
@@ -71,6 +73,7 @@ export class NotesService {
       return note.rows;
     } catch (error) {
       console.log(error);
+      throw new Error(error);
     }
   }
 
@@ -84,6 +87,7 @@ export class NotesService {
       return note.rows;
     } catch (error) {
       console.log(error);
+      throw new Error(error);
     }
   }
 
@@ -114,25 +118,26 @@ export class NotesService {
       ).rows;
     } catch (error) {
       console.log(error);
+      throw new Error(error);
     }
   }
 
   async updateNotesPositions(notes: NotesPositionsDto[]) {
-    const client = await this.pool.connect();
     try {
-      await client.query('BEGIN');
+      await this.pool.query('BEGIN');
+
       for (const { id, position } of notes) {
-        await client.query('UPDATE notes SET position=$1 WHERE id=$2', [
+        await this.pool.query('UPDATE notes SET position=$1 WHERE id=$2', [
           position,
           id,
         ]);
       }
-      await client.query('COMMIT');
+
+      await this.pool.query('COMMIT');
     } catch (error) {
-      await client.query('ROLLBACK');
+      await this.pool.query('ROLLBACK');
       console.log(error);
-    } finally {
-      client.release();
+      throw new Error(error);
     }
   }
 }
