@@ -1,4 +1,11 @@
-import { IsString, IsArray, IsInt, IsNumber, Min } from 'class-validator';
+import {
+  IsString,
+  IsArray,
+  IsInt,
+  IsNumber,
+  Min,
+  MaxLength,
+} from 'class-validator';
 
 export class NoteDto {
   @Min(1)
@@ -13,6 +20,7 @@ export class NoteDto {
 
   @IsArray()
   @IsString({ each: true })
+  @MaxLength(80, { each: true })
   tags: string[];
 
   @IsInt()
