@@ -7,6 +7,7 @@ import { UsersService } from '../users/users.service';
 import { JwtService } from '@nestjs/jwt';
 import { UserModel } from '../../models/user.model';
 import { UserCredentials } from '../users/types';
+import * as bcrypt from 'bcrypt';
 
 @Injectable()
 export class AuthService {
@@ -36,8 +37,9 @@ export class AuthService {
       throw new UnauthorizedException(`There is no user with email ${email}`);
     }
 
-    // TODO: bcrypt
-    if (user && user.password === password) {
+    const isPasswordValid = await bcrypt.compare(password, user.password);
+
+    if (user && isPasswordValid) {
       return user;
     }
 
