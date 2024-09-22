@@ -10,14 +10,14 @@ export class UsersService {
       id: 1,
       username: 'Andrei',
       email: 'andrei@gmail.com',
-      password: 'root',
+      password: '$2b$04$B7UAnFCcTcJbnBBangysTuiLK4/fZDm353dMvI7ftR0stBfInFy1O',
       refreshToken: '123',
     },
     {
       id: 2,
       username: 'Julia',
       email: 'julia@gmail.com',
-      password: 'root',
+      password: '$2b$04$B7UAnFCcTcJbnBBangysTuiLK4/fZDm353dMvI7ftR0stBfInFy1O',
       refreshToken: '123',
     },
   ];
@@ -70,6 +70,12 @@ export class UsersService {
     const userDto = this.getUserData(user);
 
     return Promise.resolve({ ...userDto });
+  }
+
+  async findByRefreshToken(refreshToken: string) {
+    const user = this.users.find((user) => user.refreshToken === refreshToken);
+
+    return user;
   }
 
   getUserData(user: UserModel) {

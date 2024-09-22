@@ -32,9 +32,9 @@ export class AuthController {
 
     res.cookie('refreshToken', user.refreshToken, {
       httpOnly: true,
-      secure: true,
-      maxAge: 14 * 24 * 60 * 60 * 3600, // 14 дней
-      sameSite: 'strict',
+      secure: process.env.MODE === 'production',
+      maxAge: 30 * 24 * 60 * 60 * 3600,
+      sameSite: 'lax',
     });
 
     const userDto = new UserResponseDto(user);
@@ -49,8 +49,8 @@ export class AuthController {
 
     res.cookie('refreshToken', user.refreshToken, {
       httpOnly: true,
-      secure: true,
-      maxAge: 14 * 24 * 60 * 60 * 3600, // 14 дней
+      secure: process.env.MODE === 'production',
+      maxAge: 30 * 24 * 60 * 60 * 3600,
       sameSite: 'strict',
     });
 
@@ -59,7 +59,6 @@ export class AuthController {
     return res.status(200).json({ ...userDto });
   }
 
-  // TODO: signOut endpoint
   @Get('signout')
   async signOut(@Req() req: Request, @Res() res: Response) {
     const refreshToken = req.cookies['refreshToken'];
@@ -68,6 +67,23 @@ export class AuthController {
 
     res.clearCookie('refreshToken');
     res.status(200).json(user);
+  }
+
+  @Get('refresh')
+  async refresh(@Req() req: Request, @Res() res: Response) {
+    const refreshToken = req.cookies['refreshToken'];
+
+    const tokens = await this.authServise.refresh(refreshToken);
+
+    res.cookie('refreshToken', tokens.refreshToken),
+      {
+        httpOnly: true,
+        secure: process.env.MODE === 'production',
+        maxAge: 30 * 24 * 60 * 60 * 3600,
+        sameSite: 'strict',
+      };
+
+    return res.status(200).json({ accessToken: tokens.accessToken });
   }
 
   @UseGuards(AuthJwtGuard)
@@ -80,6 +96,4 @@ export class AuthController {
   getAllUsers() {
     return this.usersService.getAllUsers();
   }
-
-  // TODO: refresh endpoint
 }
