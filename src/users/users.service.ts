@@ -2,6 +2,7 @@ import { Injectable } from '@nestjs/common';
 import { UserDto } from './dto/user.dto';
 import { UserModel } from '../../models/user.model';
 import { SignInUserData, UserCredentials } from './types';
+import * as bcrypt from 'bcrypt';
 @Injectable()
 export class UsersService {
   private users: UserModel[] = [
@@ -32,12 +33,13 @@ export class UsersService {
   }: UserCredentials): Promise<UserDto> {
     const id = Date.now();
 
-    // TODO: bcrypt
+    const passwordHash = await bcrypt.hash(password, 3);
+
     const user: UserModel = {
       id,
       username,
       email,
-      password,
+      password: passwordHash,
     };
 
     this.users.push(user);
