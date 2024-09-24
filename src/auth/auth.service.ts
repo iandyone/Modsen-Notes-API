@@ -7,21 +7,21 @@ import { UsersService } from '../users/users.service';
 import { JwtService } from '@nestjs/jwt';
 import { UserModel } from '../../models/user.model';
 import { UserCredentials } from '../users/types';
-import * as bcrypt from 'bcrypt';
 import { UserDto } from '../users/dto/user.dto';
+import * as bcrypt from 'bcrypt';
+import { PostgresService } from '../postgress/postgres.service';
 
 @Injectable()
 export class AuthService {
   constructor(
     private readonly usersServise: UsersService,
+    private readonly postgresService: PostgresService,
     private readonly jwtService: JwtService,
   ) {}
 
   async signIn(userData: UserModel) {
     // Корректность пользовательских данных была проверена AuthLocalGuard (passport-local)
-
-    // TODO: получать пользователя из accessToken?
-    const user = await this.usersServise.findOne(userData.email);
+    const user = await this.usersServise.findUserByEmail(userData.email);
 
     const tokens = this.generateTokens(userData);
 
@@ -35,7 +35,7 @@ export class AuthService {
     email,
     password,
   }: UserModel): Promise<UserModel | null> {
-    const user = await this.usersServise.findOne(email);
+    const user = await this.usersServise.findUserByEmail(email);
 
     if (!user) {
       throw new UnauthorizedException(`There is no user with email ${email}`);
@@ -52,7 +52,7 @@ export class AuthService {
 
   async signUp(credentials: UserCredentials) {
     const { email } = credentials;
-    const isUserAlreadyExists = await this.usersServise.findOne(email);
+    const isUserAlreadyExists = await this.usersServise.findUserByEmail(email);
 
     if (isUserAlreadyExists) {
       throw new ConflictException(`User with email ${email} is already exists`);
@@ -60,12 +60,14 @@ export class AuthService {
 
     const user = await this.usersServise.createUser(credentials);
 
-    const tokens = await this.signIn(user);
+    const userData = await this.signIn(user);
 
-    return {
-      ...user,
-      ...tokens,
-    };
+    await this.postgresService.saveUserRefreshToken({
+      id: userData.id,
+      refreshToken: userData.refreshToken,
+    });
+
+    return userData;
   }
 
   async refresh(refreshToken: string) {
@@ -81,15 +83,19 @@ export class AuthService {
       ...userData,
     });
 
-    user.refreshToken = tokens.refreshToken;
+    const { refreshToken: updatedRefreshToken } =
+      await this.postgresService.updateUserRefreshToken({
+        id: user.id,
+        refreshToken,
+      });
 
-    return tokens;
+    return { ...tokens, refreshToken: updatedRefreshToken };
   }
 
   generateTokens(user: UserModel) {
     return {
-      accessToken: this.jwtService.sign(user, { expiresIn: '30m' }),
-      refreshToken: this.jwtService.sign(user, { expiresIn: '14d' }),
+      accessToken: this.jwtService.sign(user, { expiresIn: '1d' }),
+      refreshToken: this.jwtService.sign(user, { expiresIn: '10d' }),
     };
   }
 }

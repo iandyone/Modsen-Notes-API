@@ -1,4 +1,5 @@
 import {
+  BadRequestException,
   Body,
   Controller,
   Get,
@@ -10,7 +11,6 @@ import {
 } from '@nestjs/common';
 import { AuthLocalGuard } from './guards/auth-local.guard';
 import { AuthService } from './auth.service';
-import { AuthJwtGuard } from './guards/auth-jwt.guard';
 import { JoiValidationPipe } from '../notes/pipes/joi-validations-pipe';
 import { signUpSchema } from './schemas/sign-up.schema';
 import { UsersService } from '../users/users.service';
@@ -63,6 +63,10 @@ export class AuthController {
   async signOut(@Req() req: Request, @Res() res: Response) {
     const refreshToken = req.cookies['refreshToken'];
 
+    if (!refreshToken) {
+      throw new BadRequestException('There is no token provides by cookie');
+    }
+
     const user = await this.usersService.signOut(refreshToken);
 
     res.clearCookie('refreshToken');
@@ -71,25 +75,18 @@ export class AuthController {
 
   @Get('refresh')
   async refresh(@Req() req: Request, @Res() res: Response) {
-    const refreshToken = req.cookies['refreshToken'];
+    const token = req.cookies['refreshToken'];
 
-    const tokens = await this.authServise.refresh(refreshToken);
+    const { accessToken, refreshToken } = await this.authServise.refresh(token);
 
-    res.cookie('refreshToken', tokens.refreshToken),
-      {
-        httpOnly: true,
-        secure: process.env.MODE === 'production',
-        maxAge: 30 * 24 * 60 * 60 * 3600,
-        sameSite: 'strict',
-      };
+    res.cookie('refreshToken', refreshToken, {
+      httpOnly: true,
+      secure: process.env.MODE === 'production',
+      maxAge: 30 * 24 * 60 * 60 * 3600,
+      sameSite: 'strict',
+    });
 
-    return res.status(200).json({ accessToken: tokens.accessToken });
-  }
-
-  @UseGuards(AuthJwtGuard)
-  @Post('/test')
-  test(@Req() req) {
-    return req.user;
+    return res.status(401).json({ accessToken });
   }
 
   @Get('users')

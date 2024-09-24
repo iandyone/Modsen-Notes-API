@@ -1,7 +1,7 @@
 import { UserModel } from '../../../models/user.model';
 
 export class UserDto {
-  id: string | number;
+  id: number;
   username: string;
   email: string;
 
