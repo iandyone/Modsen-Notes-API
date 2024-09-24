@@ -3,8 +3,11 @@ import { UserDto } from './dto/user.dto';
 import { UserModel } from '../../models/user.model';
 import { SignInUserData, UserCredentials } from './types';
 import * as bcrypt from 'bcrypt';
+import { PostgresService } from '../postgress/postgres.service';
 @Injectable()
 export class UsersService {
+  constructor(private readonly postgresServise: PostgresService) {}
+
   private users: UserModel[] = [
     {
       id: 1,
@@ -22,8 +25,10 @@ export class UsersService {
     },
   ];
 
-  async findOne(email: string): Promise<UserModel | undefined> {
-    return this.users.find((user) => user.email === email);
+  async findUserByEmail(email: string): Promise<UserModel | undefined> {
+    const user = await this.postgresServise.findUserByEmail(email);
+
+    return user;
   }
 
   async createUser({
@@ -31,25 +36,24 @@ export class UsersService {
     email,
     password,
   }: UserCredentials): Promise<UserDto> {
-    const id = Date.now();
-
     const passwordHash = await bcrypt.hash(password, 3);
 
-    const user: UserModel = {
-      id,
+    const user = await this.postgresServise.createUser({
       username,
       email,
       password: passwordHash,
-    };
+    });
 
-    this.users.push(user);
     const userDto = this.getUserData(user);
 
     return userDto;
   }
 
   async signIn({ user, accessToken, refreshToken }: SignInUserData) {
-    user.refreshToken = refreshToken;
+    await this.postgresServise.updateUserRefreshToken({
+      id: user.id,
+      refreshToken,
+    });
 
     const userData = this.getUserData({
       ...user,
@@ -63,17 +67,14 @@ export class UsersService {
   }
 
   async signOut(refreshToken: string) {
-    const user = this.users.find((user) => user.refreshToken === refreshToken);
+    const data = this.postgresServise.removeRefreshToken(refreshToken);
 
-    delete user.refreshToken;
-
-    const userDto = this.getUserData(user);
-
-    return Promise.resolve({ ...userDto });
+    return data;
   }
 
   async findByRefreshToken(refreshToken: string) {
-    const user = this.users.find((user) => user.refreshToken === refreshToken);
+    const user =
+      await this.postgresServise.findUserByRefreshToken(refreshToken);
 
     return user;
   }
