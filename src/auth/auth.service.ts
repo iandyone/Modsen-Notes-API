@@ -62,11 +62,6 @@ export class AuthService {
 
     const userData = await this.signIn(user);
 
-    await this.postgresService.saveUserRefreshToken({
-      id: userData.id,
-      refreshToken: userData.refreshToken,
-    });
-
     return userData;
   }
 

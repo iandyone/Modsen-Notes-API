@@ -93,9 +93,4 @@ export class AuthController {
 
     return res.status(401).json({ accessToken });
   }
-
-  @Get('users')
-  getAllUsers() {
-    return this.usersService.getAllUsers();
-  }
 }

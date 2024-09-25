@@ -78,6 +78,15 @@ export class PostgresService {
     return data.rows[0];
   }
 
+  async findRefreshTokenByUserId(id: number) {
+    const data = await this.pool.query(
+      'SELECT * FROM tokens WHERE user_id = $1',
+      [id],
+    );
+
+    return data.rows[0];
+  }
+
   async updateUserRefreshToken({ id, refreshToken }: SaveRefreshTokenPayload) {
     const data = await this.pool.query<UserModel>(
       'UPDATE tokens SET token=$1 WHERE user_id = $2 RETURNING *',
