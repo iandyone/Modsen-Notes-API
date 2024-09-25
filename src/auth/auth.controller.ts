@@ -33,8 +33,8 @@ export class AuthController {
     res.cookie('refreshToken', user.refreshToken, {
       httpOnly: true,
       secure: process.env.MODE === 'production',
+      sameSite: 'none',
       maxAge: 30 * 24 * 60 * 60 * 3600,
-      sameSite: 'lax',
     });
 
     const userDto = new UserResponseDto(user);
@@ -50,8 +50,8 @@ export class AuthController {
     res.cookie('refreshToken', user.refreshToken, {
       httpOnly: true,
       secure: process.env.MODE === 'production',
+      sameSite: 'none',
       maxAge: 30 * 24 * 60 * 60 * 3600,
-      sameSite: 'strict',
     });
 
     const userDto = new UserResponseDto(user);
@@ -69,7 +69,12 @@ export class AuthController {
 
     const user = await this.usersService.signOut(refreshToken);
 
-    res.clearCookie('refreshToken');
+    res.clearCookie('refreshToken', {
+      httpOnly: true,
+      secure: process.env.MODE === 'production',
+      sameSite: 'none',
+    });
+
     res.status(200).json(user);
   }
 
@@ -82,8 +87,8 @@ export class AuthController {
     res.cookie('refreshToken', refreshToken, {
       httpOnly: true,
       secure: process.env.MODE === 'production',
+      sameSite: 'none',
       maxAge: 30 * 24 * 60 * 60 * 3600,
-      sameSite: 'strict',
     });
 
     return res.status(401).json({ accessToken });

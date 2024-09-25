@@ -50,7 +50,7 @@ export class UsersService {
   }
 
   async signIn({ user, accessToken, refreshToken }: SignInUserData) {
-    await this.postgresServise.updateUserRefreshToken({
+    await this.postgresServise.saveUserRefreshToken({
       id: user.id,
       refreshToken,
     });
