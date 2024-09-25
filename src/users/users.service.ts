@@ -8,23 +8,6 @@ import { PostgresService } from '../postgress/postgres.service';
 export class UsersService {
   constructor(private readonly postgresServise: PostgresService) {}
 
-  private users: UserModel[] = [
-    {
-      id: 1,
-      username: 'Andrei',
-      email: 'andrei@gmail.com',
-      password: '$2b$04$B7UAnFCcTcJbnBBangysTuiLK4/fZDm353dMvI7ftR0stBfInFy1O',
-      refreshToken: '123',
-    },
-    {
-      id: 2,
-      username: 'Julia',
-      email: 'julia@gmail.com',
-      password: '$2b$04$B7UAnFCcTcJbnBBangysTuiLK4/fZDm353dMvI7ftR0stBfInFy1O',
-      refreshToken: '123',
-    },
-  ];
-
   async findUserByEmail(email: string): Promise<UserModel | undefined> {
     const user = await this.postgresServise.findUserByEmail(email);
 
@@ -50,10 +33,21 @@ export class UsersService {
   }
 
   async signIn({ user, accessToken, refreshToken }: SignInUserData) {
-    await this.postgresServise.saveUserRefreshToken({
-      id: user.id,
-      refreshToken,
-    });
+    const isTokenExists = await this.postgresServise.findRefreshTokenByUserId(
+      user.id,
+    );
+
+    if (!isTokenExists) {
+      await this.postgresServise.saveUserRefreshToken({
+        id: user.id,
+        refreshToken,
+      });
+    } else {
+      await this.postgresServise.updateUserRefreshToken({
+        id: user.id,
+        refreshToken,
+      });
+    }
 
     const userData = this.getUserData({
       ...user,
@@ -82,9 +76,5 @@ export class UsersService {
   getUserData(user: UserModel) {
     const userDto = new UserDto(user);
     return { ...userDto };
-  }
-
-  getAllUsers() {
-    return this.users;
   }
 }
