@@ -50,10 +50,21 @@ export class UsersService {
   }
 
   async signIn({ user, accessToken, refreshToken }: SignInUserData) {
-    await this.postgresServise.saveUserRefreshToken({
-      id: user.id,
-      refreshToken,
-    });
+    const isTokenExists = await this.postgresServise.findRefreshTokenByUserId(
+      user.id,
+    );
+
+    if (!isTokenExists) {
+      await this.postgresServise.saveUserRefreshToken({
+        id: user.id,
+        refreshToken,
+      });
+    } else {
+      await this.postgresServise.updateUserRefreshToken({
+        id: user.id,
+        refreshToken,
+      });
+    }
 
     const userData = this.getUserData({
       ...user,
