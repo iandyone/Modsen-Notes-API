@@ -88,7 +88,7 @@ export class PostgresService {
   }
 
   async updateUserRefreshToken({ id, refreshToken }: SaveRefreshTokenPayload) {
-    const data = await this.pool.query<UserModel>(
+    const data = await this.pool.query<SaveFerfeshTokenResponse>(
       'UPDATE tokens SET token=$1 WHERE user_id = $2 RETURNING *',
       [refreshToken, id],
     );

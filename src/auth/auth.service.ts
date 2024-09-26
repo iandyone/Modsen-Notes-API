@@ -78,10 +78,10 @@ export class AuthService {
       ...userData,
     });
 
-    const { refreshToken: updatedRefreshToken } =
+    const { token: updatedRefreshToken } =
       await this.postgresService.updateUserRefreshToken({
         id: user.id,
-        refreshToken,
+        refreshToken: tokens.refreshToken,
       });
 
     return { ...tokens, refreshToken: updatedRefreshToken };
