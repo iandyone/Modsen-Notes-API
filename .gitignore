@@ -6,6 +6,8 @@
 # Logs
 logs
 *.log
+*.sql
+db.sql
 npm-debug.log*
 pnpm-debug.log*
 yarn-debug.log*
