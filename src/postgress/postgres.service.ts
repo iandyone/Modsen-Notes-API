@@ -167,7 +167,7 @@ export class PostgresService {
       await this.pool.query('BEGIN');
       for (const key of Object.keys(note)) {
         if (key !== 'id' && key !== 'tags' && key !== 'lastUpdate') {
-          if (note[key]) {
+          if (note[key] !== undefined) {
             const query = `UPDATE notes SET ${key} = $1 WHERE id = $2`;
             await this.pool.query(query, [note[key], note.id]);
           }
@@ -179,7 +179,7 @@ export class PostgresService {
         [note.id],
       );
 
-      if (note.description) {
+      if (note.description != undefined) {
         await this.pool.query('DELETE FROM tags WHERE note_id = $1', [note.id]);
 
         if (note.tags && note.tags.length > 0) {
